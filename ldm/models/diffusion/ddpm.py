@@ -446,7 +446,7 @@ class LatentDiffusion(DDPM):
                  scale_by_std=False,
                  reg_weight = 1.0,
                  *args, **kwargs):
-        
+
         self.reg_weight = reg_weight
 
         self.num_timesteps_cond = default(num_timesteps_cond, 1)
@@ -477,7 +477,7 @@ class LatentDiffusion(DDPM):
 
         self.cond_stage_forward = cond_stage_forward
         self.clip_denoised = False
-        self.bbox_tokenizer = None  
+        self.bbox_tokenizer = None
 
         self.restarted_from_ckpt = False
         if ckpt_path is not None:
@@ -495,7 +495,7 @@ class LatentDiffusion(DDPM):
             self.model.train = disabled_train
             for param in self.model.parameters():
                 param.requires_grad = False
-        
+
         self.embedding_manager = None
 
 
@@ -558,14 +558,14 @@ class LatentDiffusion(DDPM):
             assert config != '__is_unconditional__'
             model = instantiate_from_config(config)
             self.cond_stage_model = model
-            
-    
+
+
     # def instantiate_embedding_manager(self, config, embedder):
     #     model = instantiate_from_config(config, embedder=embedder)
 
     #     if config.params.get("embedding_manager_ckpt", None): # do not load if missing OR empty string
     #         model.load(config.params.embedding_manager_ckpt)
-        
+
     #     return model
 
     def _get_denoise_row_from_list(self, samples, desc='', force_no_decoder_quantization=False):
@@ -834,7 +834,7 @@ class LatentDiffusion(DDPM):
                 z = z.view((z.shape[0], -1, ks[0], ks[1], z.shape[-1]))  # (bn, nc, ks[0], ks[1], L )
 
                 # 2. apply model loop over last dim
-                if isinstance(self.first_stage_model, VQModelInterface):  
+                if isinstance(self.first_stage_model, VQModelInterface):
                     output_list = [self.first_stage_model.decode(z[:, :, :, :, i],
                                                                  force_not_quantize=predict_cids or force_not_quantize)
                                    for i in range(z.shape[-1])]
@@ -907,7 +907,7 @@ class LatentDiffusion(DDPM):
         x, c = self.get_input(batch, self.first_stage_key)
         loss = self(x, c)
         return loss
-    
+
     def training_step(self, batch, batch_idx):
         if isinstance(batch, dict):
             # No Reg dataset for the training
@@ -967,7 +967,7 @@ class LatentDiffusion(DDPM):
 
         if hasattr(self, "split_input_params"):
             assert len(cond) == 1  # todo can only deal with one conditioning atm
-            assert not return_ids  
+            assert not return_ids
             ks = self.split_input_params["ks"]  # eg. (128, 128)
             stride = self.split_input_params["stride"]  # eg. (64, 64)
 
@@ -1093,7 +1093,7 @@ class LatentDiffusion(DDPM):
         loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3])
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
 
-        logvar_t = self.logvar[t].to(self.device)
+        logvar_t = self.logvar[t.cpu()].to(self.device)
         loss = loss_simple / torch.exp(logvar_t) + logvar_t
         # loss = loss_simple / torch.exp(self.logvar) + self.logvar
         if self.learn_logvar:
@@ -1386,13 +1386,13 @@ class LatentDiffusion(DDPM):
             if plot_denoise_rows:
                 denoise_grid = self._get_denoise_row_from_list(z_denoise_row)
                 log["denoise_row"] = denoise_grid
-            
+
             uc = self.get_learned_conditioning(len(c) * [""])
-            sample_scaled, _ = self.sample_log(cond=c, 
-                                               batch_size=N, 
-                                               ddim=use_ddim, 
+            sample_scaled, _ = self.sample_log(cond=c,
+                                               batch_size=N,
+                                               ddim=use_ddim,
                                                ddim_steps=ddim_steps,
-                                               eta=ddim_eta,                                                 
+                                               eta=ddim_eta,
                                                unconditional_guidance_scale=5.0,
                                                unconditional_conditioning=uc)
             log["samples_subject"] = self.decode_first_stage(sample_scaled)
@@ -1518,7 +1518,7 @@ class LatentDiffusion(DDPM):
 
     #     if not self.unfreeze_model: # If we are not tuning the model itself, zero-out the checkpoint content to preserve memory.
     #         checkpoint.clear()
-        
+
     #     if os.path.isdir(self.trainer.checkpoint_callback.dirpath):
     #         self.embedding_manager.save(os.path.join(self.trainer.checkpoint_callback.dirpath, "embeddings.pt"))
 
